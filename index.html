@@ -73,8 +73,8 @@
 
   function render() {
     goalNameEl.textContent = goalName;
-    goalPriceEl.textContent = "Cilj: " + goalPrice + " kn";
-    statusEl.textContent = "Skupljeno: " + saved + " / " + goalPrice + " kn";
+    goalPriceEl.textContent = "Cilj: " + goalPrice + " KM";
+    statusEl.textContent = "Skupljeno: " + saved + " / " + goalPrice + " KM";
     let percent = goalPrice > 0 ? Math.min(100, (saved / goalPrice) * 100) : 0;
     bar.style.width = percent + "%";
   }
