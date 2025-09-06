@@ -1,119 +1,56 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Moja Štednja</title>
-  <meta name="theme-color" content="#0ea5e9">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="assets/icon-192.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikacija za Štednju</title>
   <style>
-    body {margin:0; font-family:sans-serif; background:#0b1220; color:#eee; display:flex; justify-content:center; align-items:center; height:100vh;}
-    .card {background:#111827; border-radius:20px; padding:24px; width:min(420px,92%); box-shadow:0 6px 20px rgba(0,0,0,.4);}
-    h1 {margin:0 0 12px 0; font-size:1.4rem;}
-    .muted{opacity:.75; font-size:.95rem; margin-bottom:12px;}
-    input, button {width:100%; padding:12px; border-radius:12px; margin-top:8px; border:0; font-size:1rem;}
-    input {background:#1f2937; color:#fff;}
-    button {background:#38bdf8; color:#001018; font-weight:bold; cursor:pointer;}
-    .progress {height:18px; background:#1f2937; border-radius:10px; overflow:hidden; margin:12px 0;}
-    .bar {height:100%; background:#38bdf8; width:0%;}
-    .row{display:flex; gap:8px;}
-    .small{flex:1;background:#374151;border-radius:10px;padding:8px;text-align:center;}
-    .muted2{opacity:.8;font-size:.85rem;margin-top:8px}
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f4f4f9; }
+    h1 { text-align: center; }
+    input, select, button { padding: 10px; margin: 5px 0; width: 100%; border-radius: 8px; border: 1px solid #ccc; }
+    button { cursor: pointer; background: #4CAF50; color: white; font-weight: bold; border: none; }
+    button:hover { background: #45a049; }
+    #progress-container { margin: 20px 0; background: #ddd; border-radius: 20px; overflow: hidden; }
+    #progress { background: #4CAF50; height: 25px; width: 0%; color: white; text-align: center; line-height: 25px; }
+    #history { margin-top: 20px; padding: 10px; background: #fff; border-radius: 8px; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1 id="goalName">Moja Štednja</h1>
-    <div class="muted" id="goalPrice"></div>
+  <h1>💰 Moja Štednja</h1>
 
-    <div class="progress"><div class="bar" id="bar"></div></div>
-    <div id="status" class="muted2"></div>
+  <div id="setup">
+    <input type="text" id="goalName" placeholder="Za što skupljaš?">
+    <input type="number" id="goalAmount" placeholder="Koliko košta cilj?">
+    <select id="goalCurrency">
+      <option value="EUR">EUR</option>
+      <option value="KM">KM</option>
+    </select>
+    <button onclick="setGoal()">Postavi cilj</button>
+  </div>
 
-    <input type="number" id="amount" placeholder="Koliko si zaradio (npr. 20)" />
-    <button id="addBtn">Dodaj</button>
+  <div id="app" style="display:none;">
+    <h2 id="goalDisplay"></h2>
+    <p id="savedDisplay"></p>
+    <p id="missingDisplay"></p>
 
-    <div style="margin-top:12px" class="row">
-      <div class="small"><button id="resetGoal">Promijeni cilj</button></div>
-      <div class="small"><button id="clearSaved">Reset štednje</button></div>
+    <div id="progress-container">
+      <div id="progress">0%</div>
+    </div>
+
+    <input type="number" id="earnInput" placeholder="Koliko si zaradio?">
+    <select id="earnCurrency">
+      <option value="EUR">EUR</option>
+      <option value="KM">KM</option>
+    </select>
+    <button onclick="addEarnings()">Dodaj zaradu</button>
+    <button onclick="resetGoal()" style="background:red;">Reset</button>
+
+    <div id="history">
+      <h3>Povijest unosa:</h3>
+      <ul id="historyList"></ul>
     </div>
   </div>
 
-<script>
-  // LOCAL STORAGE KEYS
-  const K_NAME = "goalName";
-  const K_PRICE = "goalPrice";
-  const K_SAVED = "saved";
-
-  function askGoal() {
-    let name = prompt("Za što skupljaš? (npr. Kukirin G4)");
-    if (!name) name = "Moja Štednja";
-    let price = parseFloat(prompt("Koliko košta cilj? (upiši broj)")) || 0;
-    localStorage.setItem(K_NAME, name);
-    localStorage.setItem(K_PRICE, price);
-    localStorage.setItem(K_SAVED, "0");
-    return {name, price, saved:0};
-  }
-
-  // load or ask
-  let goalName = localStorage.getItem(K_NAME);
-  let goalPrice = parseFloat(localStorage.getItem(K_PRICE) || "0");
-  let saved = parseFloat(localStorage.getItem(K_SAVED) || "0");
-
-  if (!goalName || !goalPrice) {
-    const g = askGoal();
-    goalName = g.name; goalPrice = g.price; saved = g.saved;
-  }
-
-  const goalNameEl = document.getElementById("goalName");
-  const goalPriceEl = document.getElementById("goalPrice");
-  const statusEl = document.getElementById("status");
-  const bar = document.getElementById("bar");
-  const amountEl = document.getElementById("amount");
-
-  function render() {
-    goalNameEl.textContent = goalName;
-    goalPriceEl.textContent = "Cilj: " + goalPrice + " KM";
-    statusEl.textContent = "Skupljeno: " + saved + " / " + goalPrice + " KM";
-    let percent = goalPrice > 0 ? Math.min(100, (saved / goalPrice) * 100) : 0;
-    bar.style.width = percent + "%";
-  }
-
-  function add() {
-    const v = parseFloat(amountEl.value) || 0;
-    if (v <= 0) { alert("Upiši broj veći od 0"); return; }
-    saved = saved + v;
-    localStorage.setItem(K_SAVED, saved);
-    amountEl.value = "";
-    render();
-  }
-
-  document.getElementById("addBtn").onclick = add;
-  document.getElementById("amount").addEventListener("keydown", e => { if (e.key === "Enter") add(); });
-
-  document.getElementById("resetGoal").onclick = () => {
-    if (confirm("Promijeniti cilj? Trenutni će se resetirati.")) {
-      const g = askGoal();
-      goalName = g.name; goalPrice = g.price; saved = g.saved;
-      render();
-    }
-  };
-
-  document.getElementById("clearSaved").onclick = () => {
-    if (confirm("Resetirati skupljeno?")) {
-      saved = 0;
-      localStorage.setItem(K_SAVED, "0");
-      render();
-    }
-  };
-
-  // render initial
-  render();
-
-  // register service worker if possible
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(()=>{ /* ignore registration errors */ });
-  }
-</script>
+  <script src="script.js"></script>
 </body>
 </html>
